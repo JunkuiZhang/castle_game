@@ -12,7 +12,7 @@ use crate::game::EnemyComing;
 use std::collections::HashMap;
 
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum HumanState {
     Idle,
     Walking,
@@ -108,16 +108,21 @@ pub trait Entity<T> : Damageable + GeoInfo {
         }
     }
 
+    fn state_changer(&mut self, rival_coming: &Option<EnemyComing>) {}
 
     fn update(&mut self, dt: f32, pos_list: &mut HashMap<u32, Vector2f>, rival_coming: &Option<EnemyComing>,
               rival_pos_list: &HashMap<u32, Vector2f>) {
+
         if let Some(enemies_coming_dir) = rival_coming {
             match self.rival_dir() {
-                None => { self.set_rival_dir(Some((*enemies_coming_dir).clone())); },
+                None => {
+                    self.set_rival_dir(Some((*enemies_coming_dir).clone()));
+                },
                 _ => {},
             }
             self.rival_coming_state_changer();
         }
+        self.state_changer(rival_coming);
         self.entity_behaviour_control(dt, &rival_pos_list);
         self.velocity_update(dt);
         self.position_check();
@@ -229,7 +234,21 @@ impl<'a> Entity<HumanState> for Human<'a> {
         }
     }
 
+    fn state_changer(&mut self, rival_coming: &Option<EnemyComing>) {
+        match rival_coming {
+            None => {
+                if self.current_state == HumanState::AttackWaiting {
+                    self.enemy_dir = None;
+                    self.attack_target = None;
+                    self.current_state = HumanState::Walking;
+                }
+            },
+            _ => {},
+        }
+    }
+
     fn entity_behaviour_control(&mut self, dt: f32, rival_pos_list: &HashMap<u32, Vector2f>) {
+
         match self.current_state {
             HumanState::Idle => {
                 if self.state_timer.elapsed_time().as_seconds() > 3.0 {
@@ -239,7 +258,7 @@ impl<'a> Entity<HumanState> for Human<'a> {
                     let mut rand_gen = rand::thread_rng();
                     let unif = rand::distributions::Uniform::new(0.0, 1.0);
                     let speed = HUMANS_WALK_SPEED * HUMANS_IDLE_WALK_SPEED_FACTOR;
-                    if rand_gen.sample(unif) < 0.5 {
+                    if rand_gen.sample(&unif) < 0.5 {
                         self.physical_states.velocity = speed;
                     } else {
                         self.physical_states.velocity = -speed;
@@ -263,7 +282,11 @@ impl<'a> Entity<HumanState> for Human<'a> {
                     Some(EnemyComing::LEFT) => {
                         velocity = Vector2f::new(- self.physical_states.velocity, 0.0);
                     },
-                    None => {},
+                    None => {
+                        self.current_state = HumanState::Walking;
+                        self.attack_target = None;
+                        self.enemy_dir = None;
+                    },
                 }
                 self.move_(velocity, dt);
                 if let Some(enemy_id) = self.generate_target_to_attack(&rival_pos_list) {

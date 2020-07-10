@@ -26,12 +26,12 @@ enum EnemyComing {
 }
 
 
-pub struct Game {
+pub struct Game<'a> {
     win: graphics::RenderWindow,
-    humans: Vec<entity::Human<'static>>,
+    humans: Vec<Box<entity::Human<'a>>>,
     humans_pos_list: HashMap<u32, Vector2f>,
-    enemies: Vec<entity::Enemy<'static>>,
-    buildings: Vec<entity::Building<'static>>,
+    enemies: Vec<Box<entity::Enemy<'a>>>,
+    buildings: Vec<Box<entity::Building<'a>>>,
     // buildings_pos_list: HashMap<u32, Vector2f>,
     buildings_pos_list: Vec<Vector2f>,
     base_ground: Vec<entity::BaseGround<'static>>,
@@ -46,7 +46,7 @@ pub struct Game {
     enemy_coming: Option<EnemyComing>,
 }
 
-impl Game {
+impl Game<'_> {
 
     pub fn new(width: u32, height: u32, title: &str) -> Game {
         let win = graphics::RenderWindow::new(window::VideoMode::new(width, height,
@@ -55,8 +55,11 @@ impl Game {
 
         let mut humans_pos_list = HashMap::new();
         let mut enemies_pos_list = HashMap::new();
-        let humans = vec![entity::Human::new(0)];
-        let enemies = vec![entity::Enemy::new(0)];
+        let mut humans = vec![Box::new(entity::Human::new(0))];
+        let mut h = entity::Human::new(1);
+        h.image.set_position(Vector2f::new(300.0, GROUND_POS_Y));
+        humans.push(Box::new(h));
+        let enemies = vec![Box::new(entity::Enemy::new(0))];
         for human in humans.iter() {
             humans_pos_list.insert(human.get_id(), human.get_position());
         }
@@ -65,7 +68,7 @@ impl Game {
         }
 
         let mut buildings_pos_list = Vec::new();
-        let mut buildings = vec![entity::Building::new(BuildingType::Base)];
+        let mut buildings = vec![Box::new(entity::Building::new(BuildingType::Base))];
         for building in buildings.iter() {
             buildings_pos_list.push(building.get_position());
         }
@@ -254,6 +257,10 @@ impl Game {
         }
 
         self.game_over_update();
+
+        if self.enemies.len() < 1 {
+            self.enemy_coming = None;
+        }
 
         self.win.display();
     }
