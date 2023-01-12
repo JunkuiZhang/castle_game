@@ -61,8 +61,8 @@ pub trait Damageable {
 }
 
 
-pub trait Entity<T> : Damageable + GeoInfo {
-    fn image(&mut self) -> &mut RectangleShape;
+pub trait Entity<'this, T> : Damageable + GeoInfo {
+    fn image(&mut self) -> &mut RectangleShape<'this>;
 
     fn is_player(&self) -> bool;
 
@@ -206,8 +206,8 @@ impl Damageable for Human<'_> {
     fn fight_status(&mut self) -> &mut EntityFightStatus { &mut self.fight_status }
 }
 
-impl<'a> Entity<HumanState> for Human<'a> {
-    fn image(&mut self) -> &'static mut RectangleShape { &mut self.image }
+impl<'a> Entity<'a, HumanState> for Human<'a> {
+    fn image(&mut self) -> &mut RectangleShape<'a> { &mut self.image }
 
     fn is_player(&self) -> bool { true }
 
@@ -390,8 +390,8 @@ impl Damageable for Enemy<'_> {
     fn fight_status(&mut self) -> &mut EntityFightStatus { &mut self.fight_status }
 }
 
-impl<'a> Entity<EnemyState> for Enemy<'a> {
-    fn image(&mut self) -> &'static mut RectangleShape { &mut self.image }
+impl<'a> Entity<'a, EnemyState> for Enemy<'a> {
+    fn image(&mut self) -> &mut RectangleShape<'a> { &mut self.image }
 
     fn is_player(&self) -> bool { false }
 
